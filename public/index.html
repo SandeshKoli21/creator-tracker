@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Creator Tracker</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6f8;
+      color: #1f2328;
+    }
+    main { max-width: 640px; margin: 0 auto; padding: 32px 16px; }
+    h1 { margin: 0 0 24px; font-size: 1.6rem; }
+    h2 { margin: 0 0 12px; font-size: 1.1rem; }
+    .card {
+      background: #fff;
+      border: 1px solid #e1e4e8;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    form { display: grid; gap: 12px; }
+    label { display: grid; gap: 4px; font-size: 0.9rem; font-weight: 600; }
+    input, select, button { font: inherit; padding: 8px 10px; border-radius: 6px; }
+    input, select { border: 1px solid #c9ced4; background: #fff; }
+    button {
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { background: #93a9d8; cursor: not-allowed; }
+    .message { margin: 0; font-size: 0.9rem; min-height: 1.2em; }
+    .message.error { color: #c62828; }
+    .message.success { color: #2e7d32; }
+    .status { color: #6a737d; margin: 0; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #eef0f2;
+    }
+    li:last-child { border-bottom: none; }
+    .name { font-weight: 600; overflow-wrap: anywhere; }
+    .meta { color: #6a737d; font-size: 0.85rem; }
+    .followers { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Creator Tracker</h1>
+
+    <section class="card">
+      <h2>Add a creator</h2>
+      <form id="creator-form">
+        <label>
+          Name
+          <input id="name" name="name" type="text" maxlength="100" required>
+        </label>
+        <label>
+          Platform
+          <select id="platform" name="platform" required>
+            <option value="Instagram">Instagram</option>
+            <option value="YouTube">YouTube</option>
+          </select>
+        </label>
+        <label>
+          Followers
+          <input id="followers" name="followers" type="number" min="1" step="1" required>
+        </label>
+        <button id="submit-btn" type="submit">Add creator</button>
+        <p id="form-message" class="message" role="status"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Creators</h2>
+      <p id="list-status" class="status">Loading creators…</p>
+      <ul id="creator-list"></ul>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('creator-form');
+    const nameInput = document.getElementById('name');
+    const platformInput = document.getElementById('platform');
+    const followersInput = document.getElementById('followers');
+    const submitBtn = document.getElementById('submit-btn');
+    const formMessage = document.getElementById('form-message');
+    const listStatus = document.getElementById('list-status');
+    const list = document.getElementById('creator-list');
+
+    function showMessage(text, type) {
+      formMessage.textContent = text;
+      formMessage.className = 'message' + (type ? ' ' + type : '');
+    }
+
+    function renderCreators(creators) {
+      list.replaceChildren();
+
+      if (creators.length === 0) {
+        listStatus.textContent = 'No creators yet';
+        listStatus.hidden = false;
+        return;
+      }
+      listStatus.hidden = true;
+
+      for (const creator of creators) {
+        const li = document.createElement('li');
+
+        const info = document.createElement('div');
+        const name = document.createElement('div');
+        name.className = 'name';
+        name.textContent = creator.name;
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = creator.platform + ' · added ' + new Date(creator.created_at).toLocaleString();
+        info.append(name, meta);
+
+        const followers = document.createElement('div');
+        followers.className = 'followers';
+        followers.textContent = Number(creator.followers).toLocaleString() + ' followers';
+
+        li.append(info, followers);
+        list.append(li);
+      }
+    }
+
+    async function loadCreators() {
+      try {
+        const res = await fetch('/api/creators');
+        if (!res.ok) throw new Error('Request failed');
+        renderCreators(await res.json());
+      } catch {
+        list.replaceChildren();
+        listStatus.textContent = 'Could not load creators. Please refresh the page.';
+        listStatus.hidden = false;
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving…';
+      showMessage('');
+
+      try {
+        const res = await fetch('/api/creators', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: nameInput.value,
+            platform: platformInput.value,
+            followers: followersInput.value,
+          }),
+        });
+        const body = await res.json().catch(() => ({}));
+
+        if (res.status === 201) {
+          form.reset();
+          showMessage('Creator added.', 'success');
+          await loadCreators();
+        } else if (res.status === 400) {
+          showMessage(body.error || 'Please check your input.', 'error');
+        } else {
+          showMessage('Something went wrong. Please try again.', 'error');
+        }
+      } catch {
+        showMessage('Could not reach the server. Please try again.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add creator';
+      }
+    });
+
+    loadCreators();
+  </script>
+</body>
+</html>

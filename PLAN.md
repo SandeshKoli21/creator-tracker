@@ -80,3 +80,7 @@ _(Record any changes to the plan here as you build.)_
   - A request body that isn't a JSON object returns `400`
   - Unknown `/api/*` routes return `404 { error }`
   - Added `npm start` and `npm run dev` scripts
+- **2026-10-26 (Phase 3):** Frontend notes:
+  - The form also checks input in the browser (`required`, `maxlength`, `min="1"`, `step="1"`) as a first line of defense; the server stays the source of truth
+  - Followers are sent as the input's string value, which the server accepts
+  - Each creator shows the date it was added
