@@ -1,0 +1,55 @@
+### Manual tests for Creator Tracker API
+### Run with the VS Code "REST Client" extension (click "Send Request"), or copy into curl.
+
+@base = http://localhost:3000
+
+### 1. List creators -> 200
+GET {{base}}/api/creators
+
+### 2. Valid creator -> 201
+POST {{base}}/api/creators
+Content-Type: application/json
+
+{ "name": "MrBeast", "platform": "YouTube", "followers": 250000000 }
+
+### 3. Blank name -> 400
+POST {{base}}/api/creators
+Content-Type: application/json
+
+{ "name": "   ", "platform": "Instagram", "followers": 100 }
+
+### 4. followers = 0 -> 400
+POST {{base}}/api/creators
+Content-Type: application/json
+
+{ "name": "Zero", "platform": "Instagram", "followers": 0 }
+
+### 5. followers = -5 -> 400
+POST {{base}}/api/creators
+Content-Type: application/json
+
+{ "name": "Negative", "platform": "Instagram", "followers": -5 }
+
+### 6. followers = 12.5 -> 400
+POST {{base}}/api/creators
+Content-Type: application/json
+
+{ "name": "Decimal", "platform": "Instagram", "followers": 12.5 }
+
+### 7. followers = "abc" -> 400
+POST {{base}}/api/creators
+Content-Type: application/json
+
+{ "name": "Text", "platform": "Instagram", "followers": "abc" }
+
+### 8. Bad platform -> 400
+POST {{base}}/api/creators
+Content-Type: application/json
+
+{ "name": "TikToker", "platform": "TikTok", "followers": 100 }
+
+### 9. Broken JSON -> 400
+POST {{base}}/api/creators
+Content-Type: application/json
+
+{ "name": "Broken", "platform": "YouTube",
